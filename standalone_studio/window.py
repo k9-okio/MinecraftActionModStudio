@@ -97,17 +97,23 @@ class ExportDialog(QDialog):
 
 
 class BbmodelImportDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, allow_merge=False):
         super().__init__(parent)
         self.setWindowTitle("导入 Blockbench 选项")
         self.setMinimumWidth(420)
         layout = QVBoxLayout(self)
         info = QLabel(
+            "追加模式会把 Blockbench 模型加进当前工程，已有的骨骼、绑定和动作都保留；"
+            "关闭追加则会用新模型替换当前工程。"
             "只导入模型时，不会带进模型自带的骨骼和动作，所有网格块保持未绑定；"
             "之后可在左侧“模型部件”里选择部件，用右侧“骨骼编辑”新建骨骼并绑定。"
         )
         info.setWordWrap(True)
         layout.addWidget(info)
+        self.merge_mode = QCheckBox("追加到当前工程（与已导入的模型合并）")
+        self.merge_mode.setChecked(bool(allow_merge))
+        self.merge_mode.setVisible(bool(allow_merge))
+        layout.addWidget(self.merge_mode)
         self.import_bones = QCheckBox("导入模型自带的骨骼层级")
         self.import_bones.setChecked(False)
         self.import_animations = QCheckBox("导入模型自带的动作")
@@ -134,7 +140,7 @@ class BbmodelImportDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Minecraft Action Mod Studio 0.6")
+        self.setWindowTitle("Minecraft Action Mod Studio 0.7")
         self.setWindowIcon(make_icon())
         self.resize(1500, 940)
         self.project: Project | None = None
@@ -505,12 +511,29 @@ class MainWindow(QMainWindow):
         self.update_viewport()
         self.update_controls()
         if source_path:
-            self.setWindowTitle(f"Minecraft Action Mod Studio 0.6 — {Path(source_path).name}")
+            self.setWindowTitle(f"Minecraft Action Mod Studio 0.7 — {Path(source_path).name}")
         else:
-            self.setWindowTitle(f"Minecraft Action Mod Studio 0.6 — {project.name}")
+            self.setWindowTitle(f"Minecraft Action Mod Studio 0.7 — {project.name}")
         self.statusBar().showMessage(
             f"{len(project.bones)} 根骨骼，{len(project.parts)} 个网格块，{len(project.animations)} 个动作"
         )
+
+    def refresh_views(self):
+        self.viewport.set_project(self.project)
+        if self.project:
+            if self.selected_bone not in self.project.bones:
+                self.selected_bone = None
+            self.selected_parts = {
+                index for index in self.selected_parts if index < len(self.project.parts)
+            }
+        self.viewport.set_selected_parts(self.selected_parts)
+        self.populate_tree()
+        self.populate_parts()
+        self.populate_animations()
+        self.sync_frame_controls()
+        self.update_viewport()
+        self.update_inspector()
+        self.update_controls()
 
     def populate_tree(self):
         self.updating = True
@@ -1500,32 +1523,40 @@ class MainWindow(QMainWindow):
         self.import_bbmodel_file(path)
 
     def import_bbmodel_file(self, path):
-        dialog = BbmodelImportDialog(self)
+        has_content = bool(self.project and (self.project.bones or self.project.parts))
+        dialog = BbmodelImportDialog(self, allow_merge=has_content)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         import_bones = dialog.import_bones.isChecked()
         import_animations = dialog.import_animations.isChecked()
+        merge = has_content and dialog.merge_mode.isChecked()
         self.busy("正在解析 Blockbench 模型…")
+        message = ""
         try:
             from .core import import_bbmodel
 
             project = import_bbmodel(path, import_bones, import_animations)
-            self.load_project(project, path)
-            if not import_bones:
-                self.statusBar().showMessage(
-                    f"已只导入模型：{len(project.parts)} 个部件全部未绑定，"
-                    "请在右侧新建骨骼并绑定部件",
-                    8000,
+            if merge:
+                stats = self.project.merge_project(project)
+                self.refresh_views()
+                message = (
+                    f"已合并 {Path(path).name}：+{stats['parts']} 个部件、"
+                    f"+{stats['bones']} 根骨骼、+{stats['animations']} 个动作；"
+                    f"当前共 {len(self.project.bones)} 根骨骼、{len(self.project.parts)} 个部件"
                 )
             else:
-                self.statusBar().showMessage(
-                    f"已导入 {len(project.bones)} 根骨骼、{len(project.parts)} 个部件",
-                    6000,
-                )
+                self.load_project(project, path)
+                if not import_bones:
+                    message = (
+                        f"已只导入模型：{len(project.parts)} 个部件全部未绑定，"
+                        "请在右侧新建骨骼并绑定部件"
+                    )
+                else:
+                    message = f"已导入 {len(project.bones)} 根骨骼、{len(project.parts)} 个部件"
         except Exception as exc:
             self.show_error("导入 Blockbench 失败", exc)
         finally:
-            self.normal_cursor()
+            self.normal_cursor(message, 9000)
 
     def open_export(self):
         if not self.project:
@@ -1562,9 +1593,9 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(text)
         QApplication.processEvents()
 
-    def normal_cursor(self):
+    def normal_cursor(self, message: str | None = None, timeout: int = 0):
         QApplication.restoreOverrideCursor()
-        self.statusBar().showMessage("就绪")
+        self.statusBar().showMessage(message or "就绪", timeout)
 
     def show_error(self, title, error):
         QMessageBox.critical(self, title, str(error))
