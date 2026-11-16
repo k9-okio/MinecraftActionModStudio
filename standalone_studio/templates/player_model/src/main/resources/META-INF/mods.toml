@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="player_model"
+version="1.0.0"
+displayName="Player Model Animation"
+authors="Player Model"
+description='''
+Replaces the visible player model with a two-segment player rig.
+The included run animation is played from the player's movement phase.
+'''
+
+[[dependencies.player_model]]
+modId="forge"
+mandatory=true
+versionRange="[66.0.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.player_model]]
+modId="minecraft"
+mandatory=true
+versionRange="[26.3,26.4)"
+ordering="NONE"
+side="BOTH"
