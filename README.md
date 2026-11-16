@@ -1,3 +1,5 @@
+**中文** | [English](README_EN.md)
+
 # Minecraft Action Mod Studio
 
 面向 Minecraft Java 版动作模组的可视化桌面工具：从 Blockbench 导入方块模型 → 搭建骨骼 → 绑定方块 → 关键帧调动作 → 导出一个可直接编译的 Forge 动作 Mod。
