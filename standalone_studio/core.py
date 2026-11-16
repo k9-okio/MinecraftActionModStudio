@@ -657,6 +657,105 @@ class Project:
             [Animation.from_dict(animation) for animation in value.get("animations") or []],
         )
 
+    def merge_project(self, other: "Project") -> dict[str, int]:
+        """把另一个工程的骨骼、部件和动作追加进来，同名骨骼尽量复用。"""
+        added_bones = 0
+        added_parts = 0
+        added_animations = 0
+        used_bones: set[str] = set(self.bones)
+        remap: dict[str, str] = {}
+        for name, bone in other.bones.items():
+            existing = self.bones.get(name)
+            if existing is not None:
+                if float(np.linalg.norm(existing.head - bone.head)) < 0.01:
+                    remap[name] = name
+                    continue
+                used_bones.discard(name)
+                remap[name] = _safe_name(name, used_bones)
+            else:
+                remap[name] = name
+        for name, bone in other.bones.items():
+            target = remap[name]
+            if target in self.bones:
+                continue
+            rest = (
+                None
+                if bone.rest_matrix is None
+                else np.array(bone.rest_matrix, dtype=float, copy=True)
+            )
+            self.bones[target] = Bone(
+                target,
+                remap.get(bone.parent) if bone.parent else None,
+                np.array(bone.head, dtype=float, copy=True),
+                np.array(bone.tail, dtype=float, copy=True),
+                np.array(bone.basis, dtype=float, copy=True),
+                rest,
+                bone.deform,
+            )
+            added_bones += 1
+
+        used_part_names = {part.name for part in self.parts}
+        for part in other.parts:
+            name = part.name
+            if name in used_part_names:
+                index = 2
+                while f"{name} ({index})" in used_part_names:
+                    index += 1
+                name = f"{name} ({index})"
+            used_part_names.add(name)
+            self.parts.append(
+                MeshPart(
+                    name,
+                    remap.get(part.bone, part.bone),
+                    part.vertices,
+                    part.faces,
+                    part.color,
+                    part.weights,
+                    part.face_uvs,
+                    part.texture_source,
+                )
+            )
+            added_parts += 1
+
+        used_animation_names = {animation.name for animation in self.animations}
+
+        def remap_tracks(source: dict[str, dict[int, np.ndarray]]) -> dict[str, dict[int, np.ndarray]]:
+            return {
+                remap.get(bone, bone): dict(keys)
+                for bone, keys in source.items()
+            }
+
+        for animation in other.animations:
+            name = animation.name
+            if name in used_animation_names:
+                index = 2
+                while f"{name} ({index})" in used_animation_names:
+                    index += 1
+                name = f"{name} ({index})"
+            used_animation_names.add(name)
+            self.animations.append(
+                Animation(
+                    name,
+                    animation.fps,
+                    animation.start,
+                    animation.end,
+                    animation.loop,
+                    remap_tracks(animation.tracks),
+                    remap_tracks(animation.locations),
+                    {
+                        remap.get(bone, bone): np.array(pivot, dtype=float, copy=True)
+                        for bone, pivot in animation.pivots.items()
+                    },
+                    remap_tracks(animation.deform_tracks),
+                )
+            )
+            added_animations += 1
+        return {
+            "bones": added_bones,
+            "parts": added_parts,
+            "animations": added_animations,
+        }
+
     def save(self, path: str | Path) -> None:
         Path(path).write_text(
             json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
