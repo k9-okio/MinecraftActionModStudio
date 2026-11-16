@@ -14,6 +14,7 @@ Windows 桌面程序，界面基于 PySide6 + pyqtgraph 实时 3D 视口，不�
 - 直接导入 Blockbench `.bbmodel`：解析方块、贴图与 UV、嵌套 group 变换、骨骼层级和原有动画。
 - 导入时可选择「只导入模型」：默认不带入模型自带的骨骼和动作，所有方块保持未绑定，方便自己重新搭建骨骼。
 - 直接导入 `.blend`：调用本机 Blender 4.0 作为后台转换器提取骨骼、网格权重和动作。
+- **混合导入**：先导入 `.blend`，再把 Blockbench 模型「追加到当前工程」，两种来源的部件、骨骼和动作保存在同一个 `.mcasproj` 文件里；同名骨骼自动复用或改名，同名动作自动加序号，互不覆盖。
 
 ### 骨骼与绑定
 - 新建骨骼 / 新建子骨骼 / 重命名 / 修改父骨骼 / 编辑关节 Head 与末端 Tail / 删除。
@@ -41,7 +42,7 @@ Windows 桌面程序，界面基于 PySide6 + pyqtgraph 实时 3D 视口，不�
 
 ## 下载
 
-在 [Releases](../../releases) 下载 `MinecraftActionModStudio-v0.6-win64.zip`，解压后双击 `MinecraftActionModStudio.exe` 即可运行（绿色免安装，Windows 10/11 64 位）。
+在 [Releases](../../releases) 下载 `MinecraftActionModStudio-v0.7-win64.zip`，解压后双击 `MinecraftActionModStudio.exe` 即可运行（绿色免安装，Windows 10/11 64 位）。
 
 ## 从源码运行
 
@@ -76,4 +77,4 @@ pyinstaller --noconfirm standalone_studio.spec
 | 鼠标中键 / 右键拖动 | 旋转、平移视图 |
 | 滚轮 | 缩放视图 |
 
-当前版本：**0.6**
+当前版本：**0.7**
