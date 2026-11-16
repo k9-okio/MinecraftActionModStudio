@@ -14,6 +14,7 @@ Windows desktop application with a real-time 3D viewport built on PySide6 + pyqt
 - Import Blockbench `.bbmodel` directly: cubes, textures and UVs, nested group transforms, bone hierarchy and existing animations.
 - Optional **model-only import**: by default the model's own bones and animations are not imported, and every cube stays unbound, so you can rig it yourself.
 - Import `.blend` files by using a local Blender 4.0 installation as a background converter to extract bones, mesh weights and actions.
+- **Mixed import**: import a `.blend` first, then append a Blockbench model to the same project — parts, bones and actions from both sources are stored in one `.mcasproj` file. Bones with the same name are reused or renamed automatically, and duplicate action names get a numeric suffix, so nothing is overwritten.
 
 ### Rigging
 - Create bones / child bones, rename, change parent, edit joint Head and Tail positions, delete bones.
@@ -41,7 +42,7 @@ Windows desktop application with a real-time 3D viewport built on PySide6 + pyqt
 
 ## Download
 
-Grab `MinecraftActionModStudio-v0.6-win64.zip` from [Releases](../../releases), extract it and double-click `MinecraftActionModStudio.exe` (portable, Windows 10/11 64-bit).
+Grab `MinecraftActionModStudio-v0.7-win64.zip` from [Releases](../../releases), extract it and double-click `MinecraftActionModStudio.exe` (portable, Windows 10/11 64-bit).
 
 ## Run from source
 
@@ -76,4 +77,4 @@ The output is placed in `dist/MinecraftActionModStudio/`.
 | Middle / right mouse drag | Orbit or pan the view |
 | Mouse wheel | Zoom |
 
-Current version: **0.6**
+Current version: **0.7**
